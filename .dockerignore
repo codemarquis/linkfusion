@@ -1,0 +1,16 @@
+# Only what the image build needs gets sent to Docker.
+node_modules
+dist
+.git
+.github
+.env*
+!.env.example
+terraform
+tests
+docs
+coverage
+*.md
+*.log
+.DS_Store
+.vscode
+.idea

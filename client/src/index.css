@@ -1,0 +1,283 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(259, 100%, 65%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(60, 4.8%, 95.9%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --success: hsl(142, 71%, 45%);
+  --success-foreground: hsl(144, 100%, 97%);
+  --warning: hsl(38, 92%, 50%);
+  --warning-foreground: hsl(48, 96%, 89%);
+  --error: hsl(0, 84.2%, 60.2%);
+  --error-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --success: hsl(142, 71%, 45%);
+  --success-foreground: hsl(144, 100%, 97%);
+  --warning: hsl(38, 92%, 50%);
+  --warning-foreground: hsl(48, 96%, 89%);
+  --error: hsl(0, 62.8%, 30.6%);
+  --error-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar styles for charts */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.scrollbar-track-gray-100::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+/* Custom utility classes for the LinkFusion design */
+.text-primary {
+  color: hsl(207, 90%, 54%);
+}
+
+.text-secondary {
+  color: hsl(259, 100%, 65%);
+}
+
+.text-success {
+  color: hsl(142, 71%, 45%);
+}
+
+.text-warning {
+  color: hsl(38, 92%, 50%);
+}
+
+.text-error {
+  color: hsl(0, 84.2%, 60.2%);
+}
+
+.bg-primary {
+  background-color: hsl(207, 90%, 54%);
+}
+
+.bg-secondary {
+  background-color: hsl(259, 100%, 65%);
+}
+
+.bg-success {
+  background-color: hsl(142, 71%, 45%);
+}
+
+.bg-warning {
+  background-color: hsl(38, 92%, 50%);
+}
+
+.bg-error {
+  background-color: hsl(0, 84.2%, 60.2%);
+}
+
+/* Primary color variations */
+.bg-primary\/10 {
+  background-color: hsl(207, 90%, 54%, 0.1);
+}
+
+.bg-primary\/20 {
+  background-color: hsl(207, 90%, 54%, 0.2);
+}
+
+.bg-secondary\/10 {
+  background-color: hsl(259, 100%, 65%, 0.1);
+}
+
+.bg-success\/10 {
+  background-color: hsl(142, 71%, 45%, 0.1);
+}
+
+.bg-warning\/10 {
+  background-color: hsl(38, 92%, 50%, 0.1);
+}
+
+.bg-error\/10 {
+  background-color: hsl(0, 84.2%, 60.2%, 0.1);
+}
+
+/* Border colors */
+.border-success {
+  border-color: hsl(142, 71%, 45%);
+}
+
+.border-success\/20 {
+  border-color: hsl(142, 71%, 45%, 0.2);
+}
+
+/* Hover states */
+.hover\:bg-blue-600:hover {
+  background-color: hsl(207, 85%, 48%);
+}
+
+.hover\:text-primary:hover {
+  color: hsl(207, 90%, 54%);
+}
+
+.hover\:text-blue-600:hover {
+  color: hsl(207, 85%, 48%);
+}
+
+.hover\:text-red-600:hover {
+  color: hsl(0, 79%, 55%);
+}
+
+.hover\:text-gray-800:hover {
+  color: hsl(0, 0%, 31%);
+}
+
+/* Animation and transitions */
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom card styles for analytics */
+.analytics-card {
+  background: linear-gradient(135deg, hsl(207, 90%, 54%, 0.05) 0%, hsl(207, 90%, 54%, 0.02) 100%);
+  border: 1px solid hsl(207, 90%, 54%, 0.1);
+}
+
+/* QR code gallery styles */
+.qr-code-item {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.qr-code-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px hsl(0, 0%, 0%, 0.1), 0 8px 10px -6px hsl(0, 0%, 0%, 0.1);
+}
+
+/* Navigation active state */
+.nav-active {
+  color: hsl(20, 14.3%, 4.1%);
+  border-bottom: 2px solid hsl(207, 90%, 54%);
+}
+
+/* Admin badge styles */
+.admin-badge {
+  background-color: hsl(0, 84.2%, 60.2%);
+  color: hsl(60, 9.1%, 97.8%);
+}
+
+/* Status badge styles */
+.status-active {
+  background-color: hsl(142, 71%, 45%, 0.1);
+  color: hsl(142, 71%, 35%);
+}
+
+.status-inactive {
+  background-color: hsl(0, 0%, 60%, 0.1);
+  color: hsl(0, 0%, 40%);
+}
+
+.status-expired {
+  background-color: hsl(0, 84.2%, 60.2%, 0.1);
+  color: hsl(0, 84.2%, 50%);
+}
+
+/* Chart and analytics specific styles */
+.chart-bar {
+  background: linear-gradient(to top, hsl(207, 90%, 54%), hsl(207, 90%, 64%));
+  border-radius: 4px 4px 0 0;
+}
+
+.chart-bar-secondary {
+  background: linear-gradient(to top, hsl(259, 100%, 65%), hsl(259, 100%, 75%));
+  border-radius: 4px 4px 0 0;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  border-color: hsl(207, 90%, 54%);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(60, 4.8%, 95.9%);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(207, 90%, 54%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(207, 85%, 48%);
+}

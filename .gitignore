@@ -1,0 +1,20 @@
+node_modules
+dist
+coverage
+.DS_Store
+*.log
+*.tar.gz
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# Terraform: state contains secrets; tfvars contains your settings
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+!terraform/terraform.tfvars.example
+terraform/tfplan
+terraform/.terraform.lock.hcl
