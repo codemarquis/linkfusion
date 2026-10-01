@@ -50,6 +50,7 @@ resource "aws_vpc_security_group_ingress_rule" "app_from_alb" {
   to_port                      = local.app_port
 }
 
+#trivy:ignore:AWS-0104 HTTPS-only egress via NAT; OAuth providers (Google, Apple, GitHub) have no fixed IP ranges to pin
 resource "aws_vpc_security_group_egress_rule" "app_https" {
   security_group_id = aws_security_group.app.id
   description       = "HTTPS out: ECR, Secrets Manager, CloudWatch, OAuth providers"

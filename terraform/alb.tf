@@ -1,3 +1,4 @@
+#trivy:ignore:AWS-0053 Public by design: the short-link service is the internet entry point, fronted by WAF and TLS 1.3
 resource "aws_lb" "main" {
   #checkov:skip=CKV2_AWS_76:The attached WAF uses AWSManagedRulesKnownBadInputsRuleSet, which covers Log4j (count-based, not traced by the scanner)
   name                       = local.name

@@ -15,6 +15,12 @@ ENV NODE_ENV=production \
     PORT=5000
 WORKDIR /app
 
+# The app runs with plain `node`, so drop the package managers bundled with the
+# base image: less attack surface, and none of npm's own dependency CVEs.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn* \
+      /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 # AWS RDS certificate bundle, so the app verifies the database's TLS certificate
 # (DATABASE_URL uses sslmode=verify-full&sslrootcert=/app/certs/rds-global-bundle.pem).
 ADD --chmod=444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/certs/rds-global-bundle.pem
