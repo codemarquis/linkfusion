@@ -3,6 +3,7 @@ import { createLinkSchema, registerSchema, updateLinkSchema } from "@shared/api"
 import { loadConfig } from "../../server/config";
 import { clickFacts, countryForIp, referrerHost } from "../../server/services/clickContext";
 import { toCsv } from "../../server/services/csv";
+import { DEMO_DAYS, generateClicks } from "../../server/services/demoData";
 import { generateShortCode } from "../../server/services/linkService";
 import { unlockPage, unavailablePage } from "../../server/services/pages";
 import { hashPassword, verifyPassword } from "../../server/services/passwords";
@@ -106,5 +107,33 @@ describe("config", () => {
     const b = loadConfig(base as NodeJS.ProcessEnv).sessionSecret;
     expect(a).not.toEqual(b);
     expect(a.length).toBeGreaterThanOrEqual(64);
+  });
+});
+
+describe("demo click generator", () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+  const links = [
+    { id: "old", weight: 3, age: 90 },
+    { id: "new", weight: 1, age: 10 },
+    { id: "expired", weight: 1, age: 80, expiredDaysAgo: 40 },
+  ];
+
+  it("is deterministic, stays inside the window and respects link lifetimes", () => {
+    const a = generateClicks(links, { now, total: 2000 });
+    expect(generateClicks(links, { now, total: 2000 })).toEqual(a);
+    expect(a.length).toBe(2000);
+    const day = 86_400_000;
+    for (const c of a) {
+      expect(c.clickedAt.getTime()).toBeLessThanOrEqual(now.getTime());
+      expect(c.clickedAt.getTime()).toBeGreaterThan(now.getTime() - (DEMO_DAYS + 1) * day);
+      if (c.urlId === "new") expect(now.getTime() - c.clickedAt.getTime()).toBeLessThan(11 * day);
+      if (c.urlId === "expired") expect(now.getTime() - c.clickedAt.getTime()).toBeGreaterThan(40 * day);
+      expect(c.country === null || /^[A-Z]{2}$/.test(c.country)).toBe(true);
+    }
+  });
+
+  it("produces anonymous clicks only (no IPs or user agents)", () => {
+    const [click] = generateClicks(links, { now, total: 1 });
+    expect(Object.keys(click!).sort()).toEqual(["browser", "clickedAt", "country", "device", "os", "referrerHost", "urlId"]);
   });
 });

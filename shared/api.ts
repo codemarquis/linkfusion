@@ -155,6 +155,16 @@ export type AnalyticsSummary = {
   operatingSystems: Breakdown[];
   referrers: Breakdown[];
   topLinks: Array<{ id: string; shortCode: string; title: string | null; clicks: number }>;
+  recentClicks: RecentClick[];
+};
+
+export type RecentClick = {
+  shortCode: string;
+  country: string | null;
+  device: string | null;
+  browser: string | null;
+  referrerHost: string | null;
+  clickedAt: string;
 };
 
 export type SystemStats = {
@@ -164,6 +174,6 @@ export type SystemStats = {
   clicksLast7Days: number;
 };
 
-export type AuthProviders = { local: true; google: boolean; github: boolean };
+export type AuthProviders = { local: true; google: boolean; github: boolean; apple: boolean };
 
 export type ApiError = { message: string; code: string; fields?: Record<string, string> };

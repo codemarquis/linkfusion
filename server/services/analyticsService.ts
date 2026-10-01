@@ -28,15 +28,20 @@ function fillDays(rows: Array<{ date: string; clicks: number }>, days: number) {
 }
 
 export function createAnalyticsService(deps: { clicks: ClickRepository; links: LinkRepository }) {
-  const sinceDays = (days: number) => new Date(Date.now() - days * 86_400_000);
+  // Start of the first UTC day in the window, so totals, breakdowns and the
+  // per-day chart all count exactly the same clicks.
+  const sinceDays = (days: number) => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (days - 1)));
+  };
 
   return {
     async summary(opts: { userId?: string; linkId?: string; days: number }): Promise<AnalyticsSummary> {
       const scope: ClickScope = { userId: opts.userId, linkId: opts.linkId, since: sinceDays(opts.days) };
-      const [daily, countries, devices, browsers, oses, referrers, topLinks, totalClicks, linkCounts] =
+      const [daily, countries, devices, browsers, oses, referrers, topLinks, totalClicks, linkCounts, recentClicks] =
         await Promise.all([
           deps.clicks.daily(scope),
-          deps.clicks.breakdown(scope, clicks.country),
+          deps.clicks.breakdown(scope, clicks.country, 250), // every country, for the map
           deps.clicks.breakdown(scope, clicks.device),
           deps.clicks.breakdown(scope, clicks.browser),
           deps.clicks.breakdown(scope, clicks.os),
@@ -44,6 +49,7 @@ export function createAnalyticsService(deps: { clicks: ClickRepository; links: L
           deps.clicks.topLinks(scope),
           deps.clicks.total({ userId: opts.userId, linkId: opts.linkId }),
           deps.links.countAll(opts.userId),
+          deps.clicks.recent(scope),
         ]);
       const dailyClicks = fillDays(daily, opts.days);
       return {
@@ -63,6 +69,7 @@ export function createAnalyticsService(deps: { clicks: ClickRepository; links: L
         operatingSystems: withPercentages(oses),
         referrers: withPercentages(referrers, "Direct / none"),
         topLinks,
+        recentClicks,
       };
     },
 

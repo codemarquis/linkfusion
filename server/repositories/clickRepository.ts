@@ -81,6 +81,24 @@ export function createClickRepository(db: Database) {
       return rows.map((r) => ({ ...r, clicks: Number(r.clicks) }));
     },
 
+    async recent(scope: ClickScope, limit = 8) {
+      const rows = await db
+        .select({
+          shortCode: shortenedUrls.shortCode,
+          country: clicks.country,
+          device: clicks.device,
+          browser: clicks.browser,
+          referrerHost: clicks.referrerHost,
+          clickedAt: clicks.clickedAt,
+        })
+        .from(clicks)
+        .innerJoin(shortenedUrls, eq(shortenedUrls.id, clicks.urlId))
+        .where(where(scope))
+        .orderBy(desc(clicks.clickedAt))
+        .limit(limit);
+      return rows.map((r) => ({ ...r, clickedAt: r.clickedAt.toISOString() }));
+    },
+
     async rows(scope: ClickScope, limit = 50_000) {
       return db
         .select({

@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useSearch } from "wouter";
 import type { AnalyticsSummary, Breakdown, Link, Paginated } from "@shared/api";
+import { DonutCard, flag, RecentActivity } from "@/components/analytics/charts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNumber } from "@/lib/format";
 
 const RANGES = [7, 30, 90, 365];
-
-const flag = (code: string) =>
-  /^[A-Z]{2}$/.test(code) ? String.fromCodePoint(...[...code].map((c) => 0x1f1a5 + c.charCodeAt(0))) : "🌐";
+// The map and its geometry load on demand, keeping the main bundle small.
+const WorldMap = lazy(() => import("@/components/analytics/world-map"));
 
 function BreakdownCard({ title, rows, withFlags = false }: { title: string; rows: Array<Breakdown & { code?: string }>; withFlags?: boolean }) {
   return (
@@ -23,7 +23,7 @@ function BreakdownCard({ title, rows, withFlags = false }: { title: string; rows
           <p className="text-sm text-muted-foreground">No clicks in this period.</p>
         ) : (
           <ul className="space-y-2">
-            {rows.map((r) => (
+            {rows.slice(0, 10).map((r) => (
               <li key={r.label}>
                 <div className="flex justify-between text-sm">
                   <span className="truncate">{withFlags ? `${flag(r.code ?? "")} ` : ""}{r.label}</span>
@@ -122,11 +122,30 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
+          <div className="grid lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Where your clicks come from</CardTitle>
+                <CardDescription>
+                  {data.countries.filter((c) => c.code).length} countries · resolved offline, IPs discarded
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<div className="aspect-[2/1] animate-pulse rounded-md bg-muted" />}>
+                  <WorldMap data={data.countries} />
+                </Suspense>
+              </CardContent>
+            </Card>
+            <BreakdownCard title="Top countries" rows={data.countries} withFlags />
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <BreakdownCard title="Countries" rows={data.countries} withFlags />
-            <BreakdownCard title="Devices" rows={data.devices} />
-            <BreakdownCard title="Browsers" rows={data.browsers} />
-            <BreakdownCard title="Operating systems" rows={data.operatingSystems} />
+            <DonutCard title="Devices" rows={data.devices} />
+            <DonutCard title="Browsers" rows={data.browsers} />
+            <DonutCard title="Operating systems" rows={data.operatingSystems} />
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             <BreakdownCard title="Referrers" rows={data.referrers} />
             {linkId === "all" && (
               <BreakdownCard
@@ -138,6 +157,7 @@ export default function Analytics() {
                 }))}
               />
             )}
+            <RecentActivity clicks={data.recentClicks} />
           </div>
         </>
       )}

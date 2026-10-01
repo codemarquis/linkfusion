@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
+import { seedDemo } from "../../server/services/demoData";
 import { ORIGIN, client, closeDb, database, hasDb, makeApp, resetDb, signUp } from "./helpers";
 
 const d = hasDb ? describe : describe.skip;
@@ -68,7 +69,12 @@ d("API (integration)", () => {
     });
 
     it("lists only configured sign-in providers", async () => {
-      expect((await client(app).get("/api/auth/providers")).body).toEqual({ local: true, google: false, github: false });
+      expect((await client(app).get("/api/auth/providers")).body).toEqual({
+        local: true,
+        google: false,
+        github: false,
+        apple: false,
+      });
     });
   });
 
@@ -281,6 +287,11 @@ d("API (integration)", () => {
       expect(summary.clicksInPeriod).toBe(3);
       expect(summary.browsers).toEqual([{ label: "Chrome", clicks: 3, percentage: 100 }]);
       expect(summary.topLinks[0]).toMatchObject({ shortCode: "stats", clicks: 3 });
+      expect(summary.recentClicks).toHaveLength(3);
+      expect(summary.recentClicks[0]).toMatchObject({ shortCode: "stats", browser: "Chrome" });
+      expect(Object.keys(summary.recentClicks[0]).sort()).toEqual(
+        ["browser", "clickedAt", "country", "device", "referrerHost", "shortCode"], // nothing identifying
+      );
       expect((await c.get(`/api/links/${l.id}/analytics?days=30`)).body.totalClicks).toBe(3);
 
       const csv = await c.get(`/api/links/${l.id}/clicks.csv`);
@@ -371,6 +382,44 @@ d("API (integration)", () => {
       const { db } = await database();
       const counts = (await db.execute(sql`select (select count(*) from users) u, (select count(*) from shortened_urls) l, (select count(*) from clicks) c`)).rows[0];
       expect(counts).toEqual({ u: "0", l: "0", c: "0" });
+    });
+  });
+
+  describe("demo data (opt-in seed)", () => {
+    it("creates a demo account with a random password, rich analytics, and resets cleanly", async () => {
+      const real = client(app);
+      await signUp(real);
+      await real.post("/api/links", { originalUrl: "https://dest.example", customAlias: "mine" });
+
+      const { db } = await database();
+      const first = await seedDemo(db, { totalClicks: 600 });
+      const second = await seedDemo(db, { totalClicks: 600 });
+      expect(second.password).not.toBe(first.password); // never a fixed, guessable password
+
+      const demo = client(app);
+      expect((await demo.post("/api/auth/login", { email: first.email, password: first.password })).status).toBe(401);
+      const login = await demo.post("/api/auth/login", { email: second.email, password: second.password });
+      expect(login.status).toBe(200);
+      expect(login.body.isAdmin).toBe(false);
+
+      const summary = (await demo.get("/api/analytics/summary?days=90")).body;
+      expect(summary.totalLinks).toBe(8);
+      expect(summary.totalClicks).toBe(second.clicks); // reseeding replaced the first run's clicks
+      expect(second.clicks).toBeGreaterThan(550);
+      expect(summary.countries.length).toBeGreaterThan(10);
+      expect(summary.devices.map((d: { label: string }) => d.label)).toEqual(expect.arrayContaining(["mobile", "desktop"]));
+      expect(summary.recentClicks).toHaveLength(8);
+
+      // Headline numbers, breakdowns and the per-day chart count the same window.
+      const month = (await demo.get("/api/analytics/summary?days=30")).body;
+      const sum = (rows: Array<{ clicks: number }>) => rows.reduce((n, r) => n + r.clicks, 0);
+      expect(sum(month.dailyClicks)).toBe(month.clicksInPeriod);
+      expect(sum(month.devices)).toBe(month.clicksInPeriod);
+      expect(sum(month.browsers)).toBe(month.clicksInPeriod);
+
+      // The real user's data is untouched and still private.
+      expect((await real.get("/api/links")).body.items.map((l: { shortCode: string }) => l.shortCode)).toEqual(["mine"]);
+      expect((await real.get("/api/analytics/summary?days=90")).body.totalClicks).toBe(0);
     });
   });
 });
