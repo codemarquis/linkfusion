@@ -4,6 +4,7 @@ import { loadConfig } from "../../server/config";
 import { createDatabase, runMigrations, type Database } from "../../server/db";
 import { attachErrorHandler, createApp } from "../../server/http/app";
 import type { RateLimits } from "../../server/http/middleware/security";
+import type { AppleDeps } from "../../server/services/appleAuth";
 
 export const ORIGIN = "http://lf.test";
 const url = process.env.TEST_DATABASE_URL;
@@ -31,7 +32,9 @@ export async function closeDb() {
   shared = undefined;
 }
 
-export async function makeApp(opts: { rateLimits?: Partial<RateLimits>; env?: Record<string, string> } = {}) {
+export async function makeApp(
+  opts: { rateLimits?: Partial<RateLimits>; env?: Record<string, string>; appleDeps?: AppleDeps } = {},
+) {
   const { db, pool } = await database();
   const config = loadConfig({
     NODE_ENV: "test",
@@ -45,6 +48,7 @@ export async function makeApp(opts: { rateLimits?: Partial<RateLimits>; env?: Re
     db,
     pool,
     quiet: true,
+    appleDeps: opts.appleDeps,
     rateLimits: { auth: 1000, api: 10_000, redirect: 10_000, unlock: 1000, ...opts.rateLimits },
   });
   attachErrorHandler(app);

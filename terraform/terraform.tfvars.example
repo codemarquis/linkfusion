@@ -7,7 +7,7 @@ certificate_arn = "arn:aws:acm:eu-central-1:123456789012:certificate/00000000-00
 container_image = "123456789012.dkr.ecr.eu-central-1.amazonaws.com/linkfusion:REPLACE_WITH_GIT_SHA"
 
 desired_count       = 2
-enable_nat_gateway  = true  # needed for Google/GitHub sign-in
+enable_nat_gateway  = true  # needed for Google/GitHub/Apple sign-in
 enable_waf          = true
 deletion_protection = true
 alarm_email         = "ops@example.com"
@@ -15,3 +15,4 @@ alarm_email         = "ops@example.com"
 # Optional OAuth: client IDs here, client secrets go into Secrets Manager (see outputs).
 google_client_id = ""
 github_client_id = ""
+# apple_sign_in = { client_id = "com.example.linkfusion.web", team_id = "ABCDE12345", key_id = "XYZ987WXYZ" }

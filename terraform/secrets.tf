@@ -57,10 +57,19 @@ resource "aws_secretsmanager_secret" "github_client_secret" {
   #checkov:skip=CKV2_AWS_57:Rotation needs a rotation Lambda; rotate by re-applying with a new random_password (see docs/deployment.md)
 }
 
+resource "aws_secretsmanager_secret" "apple_private_key" {
+  count                   = var.apple_sign_in == null ? 0 : 1
+  name                    = "${local.name}/apple-private-key"
+  recovery_window_in_days = 7
+  kms_key_id              = aws_kms_key.main.arn
+  #checkov:skip=CKV2_AWS_57:Rotation needs a rotation Lambda; rotate by re-applying with a new random_password (see docs/deployment.md)
+}
+
 locals {
   oauth_secrets = concat(
     [for s in aws_secretsmanager_secret.google_client_secret : { name = "GOOGLE_CLIENT_SECRET", valueFrom = s.arn }],
     [for s in aws_secretsmanager_secret.github_client_secret : { name = "GITHUB_CLIENT_SECRET", valueFrom = s.arn }],
+    [for s in aws_secretsmanager_secret.apple_private_key : { name = "APPLE_PRIVATE_KEY", valueFrom = s.arn }],
   )
   app_secret_arns = concat(
     [aws_secretsmanager_secret.database_url.arn, aws_secretsmanager_secret.session_secret.arn],

@@ -23,6 +23,10 @@ const schema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     GITHUB_CLIENT_ID: z.string().optional(),
     GITHUB_CLIENT_SECRET: z.string().optional(),
+    APPLE_CLIENT_ID: z.string().optional(), // the Services ID, e.g. com.example.linkfusion.web
+    APPLE_TEAM_ID: z.string().optional(),
+    APPLE_KEY_ID: z.string().optional(),
+    APPLE_PRIVATE_KEY: z.string().optional(), // contents of the .p8 key; "\n" escapes are accepted
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production") {
@@ -48,7 +52,10 @@ export type Config = {
   migrateOnStart: boolean;
   google?: { clientId: string; clientSecret: string };
   github?: { clientId: string; clientSecret: string };
+  apple?: AppleConfig;
 };
+
+export type AppleConfig = { clientId: string; teamId: string; keyId: string; privateKey: string };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
   const parsed = schema.safeParse(source);
@@ -82,6 +89,15 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     github:
       env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
         ? { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }
+        : undefined,
+    apple:
+      env.APPLE_CLIENT_ID && env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY
+        ? {
+            clientId: env.APPLE_CLIENT_ID,
+            teamId: env.APPLE_TEAM_ID,
+            keyId: env.APPLE_KEY_ID,
+            privateKey: env.APPLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+          }
         : undefined,
   };
 }

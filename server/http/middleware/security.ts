@@ -37,9 +37,17 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * Browsers always send Origin on cross-site POST/PUT/PATCH/DELETE, and pages
  * can't forge it. Requests without Origin or Referer are rejected outright.
  */
+/**
+ * The one cross-site POST we accept: Sign in with Apple's form_post callback.
+ * It carries its own CSRF defence (a state value bound to a browser cookie and
+ * to the ID token's nonce), checked in the auth routes.
+ */
+export const CROSS_SITE_CALLBACKS = new Set(["/api/auth/apple/callback"]);
+
 export function requireSameOrigin(config: Config): RequestHandler {
   return (req, _res, next) => {
     if (SAFE_METHODS.has(req.method)) return next();
+    if (req.method === "POST" && CROSS_SITE_CALLBACKS.has(req.path)) return next();
     let origin = req.get("origin");
     if (!origin) {
       try {

@@ -5,7 +5,7 @@ import type { UserRepository } from "../repositories/userRepository";
 import { hashPassword, verifyPassword } from "./passwords";
 
 export type OAuthProfile = {
-  provider: "google" | "github";
+  provider: "google" | "github" | "apple";
   providerUserId: string;
   email: string | null;
   emailVerified: boolean;
@@ -55,7 +55,7 @@ export function createAuthService(users: UserRepository) {
     },
 
     /**
-     * Sign in with Google/GitHub. An existing account is only linked by email
+     * Sign in with Google, GitHub or Apple. An existing account is only linked by email
      * when the provider says the email is verified, which prevents account
      * takeover through an unverified address.
      */

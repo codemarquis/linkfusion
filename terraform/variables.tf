@@ -109,6 +109,16 @@ variable "github_client_id" {
   default     = ""
 }
 
+variable "apple_sign_in" {
+  description = "Sign in with Apple: Services ID, Team ID and Key ID (optional; the .p8 key goes into Secrets Manager)"
+  type = object({
+    client_id = string
+    team_id   = string
+    key_id    = string
+  })
+  default = null
+}
+
 variable "log_retention_days" {
   description = "CloudWatch log retention"
   type        = number

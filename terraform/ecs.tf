@@ -94,6 +94,11 @@ resource "aws_ecs_task_definition" "app" {
       ],
       var.google_client_id == "" ? [] : [{ name = "GOOGLE_CLIENT_ID", value = var.google_client_id }],
       var.github_client_id == "" ? [] : [{ name = "GITHUB_CLIENT_ID", value = var.github_client_id }],
+      var.apple_sign_in == null ? [] : [
+        { name = "APPLE_CLIENT_ID", value = var.apple_sign_in.client_id },
+        { name = "APPLE_TEAM_ID", value = var.apple_sign_in.team_id },
+        { name = "APPLE_KEY_ID", value = var.apple_sign_in.key_id },
+      ],
     )
 
     secrets = concat(

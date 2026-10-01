@@ -14,6 +14,7 @@ import { createLinkRepository } from "../repositories/linkRepository";
 import { createQrRepository } from "../repositories/qrRepository";
 import { createUserRepository } from "../repositories/userRepository";
 import { createAnalyticsService } from "../services/analyticsService";
+import { createAppleAuth, type AppleDeps } from "../services/appleAuth";
 import { createAuthService } from "../services/authService";
 import { createLinkService } from "../services/linkService";
 import { createRedirectService } from "../services/redirectService";
@@ -40,6 +41,8 @@ export type AppDeps = {
   pool: pg.Pool;
   rateLimits?: Partial<RateLimits>;
   quiet?: boolean;
+  /** Test seam for Sign in with Apple's token endpoint and signing keys. */
+  appleDeps?: AppleDeps;
 };
 
 export function createApp(deps: AppDeps): Express {
@@ -55,6 +58,9 @@ export function createApp(deps: AppDeps): Express {
   const links = createLinkService({ links: linksRepo, qr, publicBaseUrl: config.publicBaseUrl });
   const redirects = createRedirectService({ links: linksRepo, clicks });
   const analytics = createAnalyticsService({ clicks, links: linksRepo });
+  const apple = config.apple
+    ? createAppleAuth(config.apple, `${config.publicBaseUrl}/api/auth/apple/callback`, deps.appleDeps)
+    : undefined;
 
   const app = express();
   app.disable("x-powered-by");
@@ -99,7 +105,7 @@ export function createApp(deps: AppDeps): Express {
     }
   });
   api.use(limits.api);
-  api.use("/auth", authRoutes({ config, auth, authLimiter: limits.auth }));
+  api.use("/auth", authRoutes({ config, auth, apple, authLimiter: limits.auth }));
   api.use("/profile", requireUser, profileRoutes({ config, users, auth, links }));
   api.use("/links", requireUser, linkRoutes({ links, qr, analytics }));
   api.use("/analytics", requireUser, analyticsRoutes({ analytics }));

@@ -11,8 +11,8 @@ LinkFusion assumes no request, input, network position or component is trustwort
 
 | Boundary | Controls |
 |---|---|
-| **Browser → app** | HTTPS only (HSTS); strict Content Security Policy; frame denial; `SameSite=Lax`, `HttpOnly`, `Secure`, `__Host-` session cookie; CSRF blocked by `Origin` checks on every state-changing request |
-| **Identity** | scrypt password hashing; constant-time comparison; same error and timing for unknown email vs. wrong password; new session id on sign-in (no fixation); OAuth accounts linked by email **only when the provider says the email is verified** |
+| **Browser → app** | HTTPS only (HSTS); strict Content Security Policy; frame denial; `SameSite=Lax`, `HttpOnly`, `Secure`, `__Host-` session cookie; CSRF blocked by `Origin` checks on every state-changing request. The only exception is Sign in with Apple's cross-site form POST, which is bound to the browser by a `state` cookie and to the ID token by a `nonce` |
+| **Identity** | scrypt password hashing; constant-time comparison; same error and timing for unknown email vs. wrong password; new session id on sign-in (no fixation); OAuth accounts linked by email **only when the provider says the email is verified**; Apple ID tokens verified against Apple's keys (signature, issuer, audience, expiry, nonce) |
 | **Authorization** | The user is re-loaded from the database on every request, so admin revocation and account deletion apply instantly. Ownership is enforced in SQL (`WHERE user_id = …`), and other users' resources return 404 (not 403) |
 | **Input** | Every body and query is validated by shared zod schemas; unknown fields are rejected (no mass assignment); destinations must be `http(s)` without credentials and can't point back at the shortener; body size limits |
 | **Abuse** | Rate limits on sign-in/sign-up, the API, redirects and password unlocks; AWS WAF (managed rules, IP reputation, rate limit) in front of production |

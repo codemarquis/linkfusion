@@ -1,14 +1,30 @@
-import { Router, type Request, type Response, type NextFunction } from "express";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import express, { Router, type Request, type Response, type NextFunction } from "express";
 import passport from "passport";
 import { Strategy as GitHubStrategy, type StrategyOptions as GitHubOptions } from "passport-github2";
 import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from "passport-google-oauth20";
 import { loginSchema, registerSchema, type AuthProviders } from "@shared/api";
 import type { Config } from "../../config";
 import { unauthorized } from "../../errors";
+import type { AppleAuth } from "../../services/appleAuth";
 import type { AuthService, OAuthProfile } from "../../services/authService";
 import { establishSession } from "../middleware/auth";
 
 type Limiter = (req: Request, res: Response, next: NextFunction) => void;
+
+const APPLE_STATE_COOKIE = "__Secure-lf.apple";
+const APPLE_COOKIE_PATH = "/api/auth/apple";
+
+function readCookie(req: Request, name: string): string | undefined {
+  for (const part of (req.get("cookie") ?? "").split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return value.join("=");
+  }
+  return undefined;
+}
+
+const sameSecret = (a: string, b: string) =>
+  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 /** GitHub only reports verification via /user/emails, so ask it directly. */
 async function githubPrimaryEmail(accessToken: string): Promise<{ email: string | null; verified: boolean }> {
@@ -22,12 +38,17 @@ async function githubPrimaryEmail(accessToken: string): Promise<{ email: string 
   return { email: primary?.email ?? null, verified: Boolean(primary?.verified) };
 }
 
-export function authRoutes(deps: { config: Config; auth: AuthService; authLimiter: Limiter }) {
+export function authRoutes(deps: { config: Config; auth: AuthService; apple?: AppleAuth; authLimiter: Limiter }) {
   const { config, auth } = deps;
   const router = Router();
 
   router.get("/providers", (_req, res) => {
-    const providers: AuthProviders = { local: true, google: Boolean(config.google), github: Boolean(config.github) };
+    const providers: AuthProviders = {
+      local: true,
+      google: Boolean(config.google),
+      github: Boolean(config.github),
+      apple: Boolean(deps.apple),
+    };
     res.json(providers);
   });
 
@@ -152,6 +173,53 @@ export function authRoutes(deps: { config: Config; auth: AuthService; authLimite
     );
     router.get("/github", deps.authLimiter, passport.authenticate("github", { session: false }));
     router.get("/github/callback", finishOAuth("github"));
+  }
+
+  const apple = deps.apple;
+  if (apple) {
+    router.get("/apple", deps.authLimiter, (_req, res) => {
+      const state = randomBytes(32).toString("base64url");
+      // SameSite=None so the cookie comes back on Apple's cross-site form POST;
+      // HttpOnly, Secure, scoped to this path and gone after ten minutes.
+      res.cookie(APPLE_STATE_COOKIE, state, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: APPLE_COOKIE_PATH,
+        maxAge: 10 * 60 * 1000,
+      });
+      res.redirect(apple.authorizeUrl(state));
+    });
+
+    router.post(
+      "/apple/callback",
+      deps.authLimiter,
+      express.urlencoded({ extended: false, limit: "16kb" }),
+      async (req, res) => {
+        const expected = readCookie(req, APPLE_STATE_COOKIE);
+        res.clearCookie(APPLE_STATE_COOKIE, { path: APPLE_COOKIE_PATH, secure: true, sameSite: "none" });
+        const body = req.body as Record<string, unknown>;
+        const { state, code, user } = body;
+        if (
+          typeof state !== "string" ||
+          typeof code !== "string" ||
+          !expected ||
+          !sameSecret(state, expected)
+        ) {
+          return res.redirect(303, "/signin?error=oauth");
+        }
+        try {
+          const profile = await apple.profileFromCode(code, state, typeof user === "string" ? user : undefined);
+          const signedIn = await auth.signInWithOAuth(profile);
+          await establishSession(req, signedIn.id);
+          res.redirect(303, "/");
+        } catch (e) {
+          const unverified = (e as { code?: string }).code === "EMAIL_NOT_VERIFIED";
+          if (!unverified) console.error("[oauth] apple sign-in failed:", e);
+          res.redirect(303, `/signin?error=${unverified ? "unverified" : "oauth"}`);
+        }
+      },
+    );
   }
 
   return router;
