@@ -22,6 +22,9 @@ concurrency:
 
 jobs:
   image:
+    # Skipped (not failed) until AWS is set up: see docs/deployment.md for the
+    # AWS_DEPLOY_ROLE_ARN, AWS_REGION and ECR_REPOSITORY repository variables.
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.meta.outputs.image }}
@@ -45,7 +48,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan before pushing
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.meta.outputs.image }}
           severity: CRITICAL,HIGH
