@@ -7,10 +7,28 @@ A URL shortener with QR codes and **privacy-first click analytics**, built with 
 
 - **Short links** with custom aliases, titles, expiry dates, click limits and **password protection**
 - **QR codes** for every link: colors, size, error correction, PNG/SVG download
-- **Analytics** for clicks per day, countries, devices, browsers, OS, referrers and top links, with CSV export
+- **Dashboard** with week-over-week trend, a 30-day click chart and a live recent-activity feed
+- **Analytics**: clicks per day, an interactive **world map**, device/browser/OS donut charts, referrers and top links, with CSV export
 - **Privacy by design**: visitor IPs are never stored; countries are resolved offline on the server
-- **Accounts** with email + password or Google/GitHub, password change, GDPR data export and account deletion
+- **Accounts** with email + password or **Google, Apple and GitHub** sign-in, password change, GDPR data export and account deletion
+- **Demo data on demand**: `npm run seed:demo` fills a local instance with 90 days of realistic traffic
 - **Admin** console: system stats, link moderation, admin role management
+
+![LinkFusion analytics: daily clicks, world map, device, browser and OS charts, referrers and recent activity](docs/screenshots/analytics.png)
+
+---
+
+## Screenshots
+
+| Dashboard | Sign-in (Google · Apple · GitHub) |
+|---|---|
+| ![Dashboard with stats, 30-day chart, recent activity and links table](docs/screenshots/dashboard.png) | ![Sign-in page with Google, Apple and GitHub buttons](docs/screenshots/sign-in.png) |
+| **QR codes** | **Admin** |
+| ![QR code styling with live preview and PNG/SVG download](docs/screenshots/qr-codes.png) | ![Admin console with system stats and link moderation](docs/screenshots/admin.png) |
+| **Landing page** | |
+| ![Landing page](docs/screenshots/landing.png) | |
+
+*Screenshots use the synthetic data from `npm run seed:demo`.*
 
 ---
 
@@ -35,9 +53,11 @@ flowchart LR
 
     shared["shared/<br/>schema + zod API contract"]
     pg[("PostgreSQL")]
+    idp["Google · Apple · GitHub<br/>OAuth 2.0 / OpenID Connect"]
 
     apiClient -->|"HTTPS · session cookie"| mw
     repos --> pg
+    routes <-->|"state + nonce · verified ID tokens"| idp
     shared -.-> client
     shared -.-> server
 ```
@@ -101,7 +121,10 @@ set -a; source .env; set +a
 npm run dev                     # http://localhost:3000 (migrations run automatically)
 
 npm run create-admin -- you@example.com   # optional: make an account an administrator
+npm run seed:demo                         # optional: demo account + 90 days of synthetic clicks
 ```
+
+`seed:demo` creates `demo@linkfusion.local` with a **random password printed once**, 8 links (including password-protected, click-limited and expired ones), styled QR codes and about 4,000 anonymous clicks spread across 30 countries, devices, browsers and referrers. Running it again resets the demo. It refuses to run against production unless `ALLOW_DEMO_SEED=true`, and demo data never appears in anyone else's account. There is no built-in demo login or "demo mode".
 
 > macOS: port 5000 is used by AirPlay Receiver, which is why local defaults use 3000 (and Docker uses 8080).
 
@@ -117,6 +140,9 @@ All settings are environment variables, validated at start-up. The app refuses t
 | `TRUST_PROXY` | – | Number of proxy hops (1 behind a load balancer) |
 | `GOOGLE_CLIENT_ID` / `_SECRET` | – | Enables Google sign-in ([docs/oauth.md](docs/oauth.md)) |
 | `GITHUB_CLIENT_ID` / `_SECRET` | – | Enables GitHub sign-in |
+| `APPLE_CLIENT_ID` / `_TEAM_ID` / `_KEY_ID` / `_PRIVATE_KEY` | – | Enables Sign in with Apple |
+
+The sign-in page always shows all three providers. A provider's button is disabled, with a hint, until its settings are present.
 
 ---
 
@@ -142,7 +168,7 @@ npm run check                                       # TypeScript
 TEST_DATABASE_URL=postgresql://linkfusion:linkfusion@localhost:5432/linkfusion npm test
 ```
 
-The suite covers unit logic (validation, user-agent parsing, password hashing, CSV safety, config) and **API integration tests against a real PostgreSQL**: authentication, CSRF, mass assignment, ownership, redirects (expiry, limits, passwords), analytics accuracy, QR rendering, admin authorization and account deletion.
+The suite covers unit logic (validation, user-agent parsing, password hashing, CSV safety, config) and **API integration tests against a real PostgreSQL**: authentication, Sign in with Apple (state, nonce, audience and signature checks), CSRF, mass assignment, ownership, redirects (expiry, limits, passwords), analytics accuracy and consistency, the demo seed, QR rendering, admin authorization and account deletion.
 
 ---
 
@@ -160,7 +186,7 @@ server/
   http/            app composition, middleware, routes
   services/        business logic
   repositories/    data access
-  scripts/         migrate, create-admin
+  scripts/         migrate, create-admin, seed:demo
 shared/            database schema + API contract (zod)
 migrations/        SQL migrations (drizzle-kit)
 tests/server/      unit + integration tests
