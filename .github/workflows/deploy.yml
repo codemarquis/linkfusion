@@ -1,0 +1,86 @@
+# Deploys to AWS with short-lived OIDC credentials (no stored AWS keys).
+# One-time setup is described in docs/deployment.md:
+#   - repository variables: AWS_REGION, AWS_DEPLOY_ROLE_ARN, ECR_REPOSITORY
+#   - a "production" environment with required reviewers
+#   - Terraform remote state (S3 backend) configured in terraform/versions.tf
+#   - terraform/terraform.tfvars values provided as the TFVARS secret
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+
+permissions:
+  contents: read
+  id-token: write # for OIDC
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: meta
+        run: echo "image=${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ steps.meta.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan before pushing
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Push (immutable tag = commit SHA)
+        run: docker push "${{ steps.meta.outputs.image }}"
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production # requires approval from a reviewer
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: Write tfvars
+        run: printf '%s\n' "$TFVARS" > terraform.tfvars
+        env:
+          TFVARS: ${{ secrets.TFVARS }}
+      - run: terraform init -input=false
+      - name: Plan
+        run: terraform plan -input=false -out=tfplan -var "container_image=${{ needs.image.outputs.image }}"
+      - name: Apply
+        run: terraform apply -input=false tfplan
+      - name: Wait for the service to become stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$(terraform output -raw ecs_cluster_name)" \
+            --services "$(terraform output -raw ecs_service_name)"

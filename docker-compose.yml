@@ -1,0 +1,38 @@
+# Local, production-like stack:  docker compose up --build  →  http://localhost:8080
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: linkfusion
+      POSTGRES_PASSWORD: linkfusion
+      POSTGRES_DB: linkfusion
+    ports:
+      - "127.0.0.1:5432:5432" # local development only; not exposed beyond this machine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkfusion"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development # session cookie without the Secure flag, so plain http://localhost works
+      SERVE_STATIC: "true"  # serve the built app (no Vite dev server in the image)
+      DATABASE_URL: postgresql://linkfusion:linkfusion@db:5432/linkfusion
+      PUBLIC_BASE_URL: http://localhost:8080
+      HOST: 0.0.0.0
+    command: ["node", "dist/index.js"]
+    ports:
+      - "127.0.0.1:8080:5000"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  db-data:
